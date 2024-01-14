@@ -31,4 +31,11 @@ class UserRepository implements UserRepositoryInterface
     {
         return $this->user->get();
     }
+
+    public function updatePassword(array $data)
+    {
+        return $this->user->where('email', data_get($data, 'email'))->update([
+            'password' => data_get($data, 'password')
+        ]);
+    }
 }

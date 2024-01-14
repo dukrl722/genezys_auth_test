@@ -30,7 +30,7 @@ class AuthController extends Controller
 
     public function authentication(Request $request)
     {
-        if (!Auth::attempt($request->only(['email', 'password']))){
+        if (!Auth::attempt($request->only(['email', 'password']))) {
             return response()->json([
                 'message' => 'Email or Password does not match with our record.',
             ], JsonResponse::HTTP_NOT_ACCEPTABLE);
@@ -110,7 +110,7 @@ class AuthController extends Controller
         }
     }
 
-    public function passwordReset(Request $request) {
+    public function sendResetPasswordEmail(Request $request) {
 
         try {
 
@@ -130,6 +130,34 @@ class AuthController extends Controller
                 'message' => $exception->getMessage()
             ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function resetPassword(Request $request) {
+
+        try {
+
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required|confirmed',
+            ]);
+
+            DB::beginTransaction();
+
+            $this->userService->updatePassword($request->only(['email', 'password']));
+
+            DB::commit();
+
+            return redirect()->route('login');
+
+        } catch (\Exception $exception) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'message' => $exception->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
     }
 
     public function logout(Request $request)

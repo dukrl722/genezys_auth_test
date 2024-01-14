@@ -16,6 +16,13 @@ class UserService
         return $this->userRepository->create($data);
     }
 
+    public function updatePassword(array $data)
+    {
+        $data['password'] = bcrypt(data_get($data, 'password'));
+
+        return $this->userRepository->updatePassword($data);
+    }
+
     public function getByEmail(string $email) {
         return $this->userRepository->getByEmail($email);
     }

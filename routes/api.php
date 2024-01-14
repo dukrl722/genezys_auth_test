@@ -21,7 +21,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'authentication'])->name('auth.login');
     Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 
-    Route::post('/forgot-password', [AuthController::class, 'passwordReset'])->name('auth.password.email');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetPasswordEmail'])->name('auth.password.email');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.password.reset');
 });
 
 Route::get('/address/{cep}', [AddressController::class, 'getAddressInfo'])->name('address');
