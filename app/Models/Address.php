@@ -9,8 +9,6 @@ class Address extends Model
 {
     use HasFactory;
 
-    protected $table = 'address';
-
     protected $fillable = [
         'cep',
         'street',
@@ -25,7 +23,8 @@ class Address extends Model
         'updated_at' => 'datetime'
     ];
 
-    public function getFullAddressAttribute() {
+    public function getFullAddressAttribute(): string
+    {
         return $this->street . ', ' . $this->number . ', ' . $this->district . ' - ' . $this->city . ', ' . $this->state . ' - ' . $this->cep;
     }
 }

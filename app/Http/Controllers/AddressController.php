@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Http\Services\AddressService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class AddressController extends Controller
 {
@@ -13,14 +12,15 @@ class AddressController extends Controller
         protected AddressService $addressService
     ) {}
 
-    public function getAddressInfo(string $cep) {
+    public function getAddressInfo(string $cep): JsonResponse
+    {
 
         try {
 
             if (!$address = $this->addressService->AddressAPI($cep)) {
                 return response()->json([
                     'message' => 'Address not found'
-                ], JsonResponse::HTTP_NOT_FOUND);
+                ], Response::HTTP_NOT_FOUND);
             }
 
             return response()->json([
@@ -29,12 +29,13 @@ class AddressController extends Controller
                 'district' => $address['bairro'],
                 'city' => $address['localidade'],
                 'state' => $address['uf']
-            ], JsonResponse::HTTP_OK);
+            ], Response::HTTP_OK);
 
         } catch (\Exception $exception) {
+            
             return response()->json([
                 'message' => $exception->getMessage()
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }

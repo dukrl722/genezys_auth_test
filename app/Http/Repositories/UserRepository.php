@@ -9,9 +9,7 @@ class UserRepository implements UserRepositoryInterface
 {
     public function __construct(
         protected User $user
-    )
-    {
-    }
+    ) {}
 
     public function create(array $data) {
         return $this->user->create([

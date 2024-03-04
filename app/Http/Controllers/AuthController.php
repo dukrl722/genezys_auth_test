@@ -2,60 +2,55 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Http\Services\AddressService;
-use App\Http\Services\AuthService;
-use App\Http\Services\UserService;
-use App\Http\Transformers\UserResource;
-use App\Models\Address;
-use App\Models\User;
+use App\Http\Repositories\contracts\AddressRepositoryInterface;
+use App\Http\Repositories\contracts\UserRepositoryInterface;
+use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class AuthController extends Controller
 {
     public function __construct(
-        protected User           $user,
-        protected Address        $address,
-        protected UserService    $userService,
-        protected AddressService $addressService,
-        protected AuthService    $authService
-    )
+        protected AddressRepositoryInterface $addressRepository,
+        protected UserRepositoryInterface $userRepository
+    ) {}
+
+    public function authentication(Request $request): JsonResponse|RedirectResponse
     {
 
-    }
-
-    public function authentication(Request $request)
-    {
         if (!Auth::attempt($request->only(['email', 'password']))) {
             return response()->json([
                 'message' => 'Email or Password does not match with our record.',
-            ], JsonResponse::HTTP_NOT_ACCEPTABLE);
+            ], Response::HTTP_NOT_ACCEPTABLE);
         }
 
         try {
 
-            if (!$user = $this->userService->getByEmail($request->email)) {
+            if (!$this->userRepository->getByEmail($request->email)) {
                 return response()->json([
                     'message' => 'User not found'
-                ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
             $request->session()->regenerate();
 
             return redirect()->intended('/dashboard');
 
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
+
             return response()->json([
                 'message' => $exception->getMessage()
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function register(Request $request)
+    public function register(Request $request): JsonResponse|RedirectResponse
     {
 
         try {
@@ -72,15 +67,15 @@ class AuthController extends Controller
                 'state' => 'required'
             ]);
 
-            if ($user = $this->userService->getByEmail($request->email)) {
+            if ($this->userRepository->getByEmail($request->email)) {
                 return response()->json([
                     'message' => 'E-mail already registered'
-                ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
             DB::beginTransaction();
 
-            $address = $this->addressService->create($request->only([
+            $address = $this->addressRepository->create($request->only([
                 'cep',
                 'street',
                 'number',
@@ -89,7 +84,7 @@ class AuthController extends Controller
                 'state'
             ]));
 
-            $user = $this->userService->create([
+            $this->userRepository->create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => $request->password,
@@ -100,17 +95,18 @@ class AuthController extends Controller
 
             return redirect()->route('dashboard');
 
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
 
             DB::rollBack();
 
             return response()->json([
                 'message' => $exception->getMessage()
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function sendResetPasswordEmail(Request $request) {
+    public function sendResetPasswordEmail(Request $request): JsonResponse|RedirectResponse
+    {
 
         try {
 
@@ -118,21 +114,22 @@ class AuthController extends Controller
                 'email' => 'required|email'
             ]);
 
-            $status = $this->authService->sendResetPasswordEmail($request);
+            $status = Password::sendResetLink($request->only('email'));
 
             return $status === Password::RESET_LINK_SENT
                 ? redirect()->route('login')
                 : redirect()->route('forgot.password');
 
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
 
             return response()->json([
                 'message' => $exception->getMessage()
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function resetPassword(Request $request) {
+    public function resetPassword(Request $request): JsonResponse|RedirectResponse
+    {
 
         try {
 
@@ -143,28 +140,28 @@ class AuthController extends Controller
 
             DB::beginTransaction();
 
-            $this->userService->updatePassword($request->only(['email', 'password']));
+            $this->userRepository->updatePassword($request->only(['email', 'password']));
 
             DB::commit();
 
             return redirect()->route('login');
 
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
 
             DB::rollBack();
 
             return response()->json([
                 'message' => $exception->getMessage()
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
         auth('sanctum')->user()->tokens()->delete();
         $request->session()->flush();
 
-        return redirect()->intended('/');
+        return redirect()->intended();
     }
 }
